@@ -19,6 +19,20 @@ function getCleanUrl() {
   return window.location.origin + window.location.pathname;
 }
 
+function captureVideoThumbnail(video) {
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 384;
+    canvas.height = 216;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.6);
+  } catch (e) {
+    // Cross-origin video will throw a SecurityError
+    return null;
+  }
+}
+
 function grabKickData() {
   const video = document.querySelector('video');
   let rawSeconds = video ? Math.floor(video.currentTime) : 0;
@@ -43,12 +57,14 @@ function grabKickData() {
   }
 
   const cleanUrl = getCleanUrl();
+  const thumbnail = video ? captureVideoThumbnail(video) : null;
 
   return {
     url: cleanUrl,
     title: finalTitle,
     time: formattedTime,
     rawSeconds: rawSeconds,
+    thumbnail: thumbnail,
     timestampCreated: new Date().toISOString()
   };
 }

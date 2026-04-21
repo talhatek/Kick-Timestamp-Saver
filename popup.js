@@ -112,8 +112,12 @@ function displayTimestamps(filter) {
     reversedData.forEach((item) => {
       const li = document.createElement('li');
       const linkUrl = item.rawSeconds !== undefined ? `${item.url}?t=${item.rawSeconds}` : item.url;
+      const thumbHtml = item.thumbnail
+        ? `<img class="thumb" src="${item.thumbnail}" alt="thumbnail">`
+        : `<div class="thumb" style="display:flex;align-items:center;justify-content:center;color:#555;font-size:10px;">No preview</div>`;
 
       li.innerHTML = `
+        ${thumbHtml}
         <div class="info">
           <strong>${item.time}</strong> - <a href="${linkUrl}" target="_blank">Link</a><br>
           <small>${item.title}</small>
@@ -129,6 +133,23 @@ function displayTimestamps(filter) {
         const indexToRemove = parseInt(e.target.getAttribute('data-index'));
         removeTimestamp(indexToRemove);
       });
+    });
+
+    // Thumbnail hover preview
+    const preview = document.getElementById('thumb-preview');
+    const previewImg = preview.querySelector('img');
+    const thumbs = document.querySelectorAll('img.thumb');
+    thumbs.forEach(thumb => {
+      thumb.addEventListener('mouseenter', () => {
+        previewImg.src = thumb.src;
+        preview.classList.add('visible');
+      });
+      thumb.addEventListener('mouseleave', () => {
+        preview.classList.remove('visible');
+      });
+    });
+    preview.addEventListener('click', () => {
+      preview.classList.remove('visible');
     });
   });
 }

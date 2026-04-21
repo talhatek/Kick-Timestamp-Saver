@@ -1,3 +1,12 @@
+// --- CONTEXT VALIDITY CHECK ---
+function isContextValid() {
+  try {
+    return !!chrome.runtime && !!chrome.runtime.id;
+  } catch (e) {
+    return false;
+  }
+}
+
 // --- AUTO-SEEK LOGIC ---
 function checkAndSeek() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -108,12 +117,21 @@ function showToast(message) {
 
 // --- PERFORM AUTO-SAVE ---
 function performAutoSave() {
+  if (!isContextValid()) {
+    stopAutoSave();
+    return;
+  }
+
   const video = document.querySelector('video');
   if (!video || video.paused || video.currentTime === 0) return;
 
   const data = grabKickData();
 
   chrome.storage.local.get({ savedData: [] }, (result) => {
+    if (chrome.runtime.lastError) {
+      stopAutoSave();
+      return;
+    }
     const list = result.savedData;
     const existingIndex = list.findIndex(item => item.url === data.url);
 
