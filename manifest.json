@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Kick Timestamp Saver",
-  "version": "1.2",
+  "version": "1.3",
   "description": "Easily save your current timestamp while watching Kick streams or VODs.",
   "permissions": [
     "activeTab",
@@ -14,7 +14,7 @@
   "content_scripts": [
     {
       "matches": ["*://*.kick.com/*"],
-      "js": ["content.js"]
+      "js": ["utils.js", "content.js"]
     }
   ],
   "commands": {

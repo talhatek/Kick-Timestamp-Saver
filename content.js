@@ -1,94 +1,130 @@
-let autoSaveInterval = null;
+// --- AUTO-SEEK LOGIC ---
+function checkAndSeek() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const targetTime = urlParams.get('t');
 
-// Start checking the time every 15 seconds (15000 milliseconds)
-function startAutoSave() {
-  if (autoSaveInterval) return; 
-  autoSaveInterval = setInterval(performAutoSave, 15000);
-}
-
-// Stop the interval
-function stopAutoSave() {
-  if (autoSaveInterval) {
-    clearInterval(autoSaveInterval);
-    autoSaveInterval = null;
+  if (targetTime) {
+    let attempts = 0;
+    const seekInterval = setInterval(() => {
+      const video = document.querySelector('video');
+      if (video && video.readyState >= 1) {
+        video.currentTime = parseFloat(targetTime);
+        clearInterval(seekInterval);
+      }
+      attempts++;
+      if (attempts > 40) clearInterval(seekInterval);
+    }, 500);
   }
 }
 
-// Check if Auto-Save is enabled when the page first loads
-chrome.storage.local.get(['autoSaveEnabled'], (result) => {
+checkAndSeek();
+
+// --- AUTO-SAVE LOGIC ---
+let autoSaveTimer = null;
+
+function startAutoSave(intervalMs) {
+  stopAutoSave();
+  const ms = intervalMs || 15000;
+  autoSaveTimer = setInterval(performAutoSave, ms);
+}
+
+function stopAutoSave() {
+  if (autoSaveTimer) {
+    clearInterval(autoSaveTimer);
+    autoSaveTimer = null;
+  }
+}
+
+// Track current interval so we can use it when restarting
+let currentIntervalMs = 15000;
+
+// Initialize auto-save from storage
+chrome.storage.local.get(['autoSaveEnabled', 'autoSaveIntervalMs'], (result) => {
+  currentIntervalMs = result.autoSaveIntervalMs || 15000;
   if (result.autoSaveEnabled) {
-    startAutoSave();
+    startAutoSave(currentIntervalMs);
   }
 });
 
-// Listen for the user flipping the switch in the popup menu
+// React to storage changes (toggle or interval change)
 chrome.storage.onChanged.addListener((changes, namespace) => {
-  if (namespace === 'local' && changes.autoSaveEnabled) {
-    if (changes.autoSaveEnabled.newValue) {
-      startAutoSave();
-    } else {
+  if (namespace !== 'local') return;
+
+  if (changes.autoSaveIntervalMs) {
+    currentIntervalMs = changes.autoSaveIntervalMs.newValue || 15000;
+  }
+
+  if (changes.autoSaveEnabled || changes.autoSaveIntervalMs) {
+    const enabled = changes.autoSaveEnabled
+      ? changes.autoSaveEnabled.newValue
+      : null;
+
+    // If toggle changed, use the new value; otherwise check current state
+    if (enabled === false) {
       stopAutoSave();
+    } else if (enabled === true) {
+      startAutoSave(currentIntervalMs);
+    } else {
+      // Only interval changed — restart if currently running
+      if (autoSaveTimer) {
+        startAutoSave(currentIntervalMs);
+      }
     }
   }
 });
 
-// The actual logic to grab and save data
+// --- TOAST NOTIFICATION ---
+function showToast(message) {
+  // Remove existing toast if any
+  const existing = document.getElementById('kick-ts-toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'kick-ts-toast';
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(83, 252, 24, 0.9);
+    color: #000;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 13px;
+    font-weight: bold;
+    z-index: 999999;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+  `;
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 500);
+  }, 2000);
+}
+
+// --- PERFORM AUTO-SAVE ---
 function performAutoSave() {
   const video = document.querySelector('video');
-  
-  // Don't save if there is no video, or if the video is paused!
   if (!video || video.paused || video.currentTime === 0) return;
 
-  let rawSeconds = Math.floor(video.currentTime);
+  const data = grabKickData();
 
-  const hours = Math.floor(rawSeconds / 3600);
-  const minutes = Math.floor((rawSeconds % 3600) / 60);
-  const seconds = rawSeconds % 60;
-  
-  let formattedTime = "";
-  if (hours > 0) {
-    formattedTime += `${hours}:${minutes.toString().padStart(2, '0')}:`;
-  } else {
-    formattedTime += `${minutes}:`;
-  }
-  formattedTime += seconds.toString().padStart(2, '0');
-
-  let channelName = "";
-  let streamTitle = "";
-  
-  const usernameEl = document.getElementById('channel-username');
-  if (usernameEl) channelName = usernameEl.innerText.trim();
-
-  const titleEl = document.querySelector('[data-testid="livestream-title"]');
-  if (titleEl) streamTitle = titleEl.innerText.trim();
-
-  let finalTitle = "";
-  if (channelName && streamTitle) {
-    finalTitle = `${channelName} - ${streamTitle}`;
-  } else if (channelName || streamTitle) {
-    finalTitle = channelName || streamTitle; 
-  } else {
-    finalTitle = document.title.replace(' | Kick', ''); 
-  }
-
-  const data = {
-    url: window.location.href,
-    title: finalTitle,
-    time: formattedTime,
-    timestampCreated: new Date().toLocaleString()
-  };
-
-  // Save to storage using the duplicate-handling logic
   chrome.storage.local.get({ savedData: [] }, (result) => {
     const list = result.savedData;
     const existingIndex = list.findIndex(item => item.url === data.url);
 
     if (existingIndex !== -1) {
-      list[existingIndex] = data; // Update existing
+      list[existingIndex] = data;
     } else {
-      list.push(data); // Add new
+      list.push(data);
     }
-    
-    chrome.storage.local.set({ savedData: list });
+
+    chrome.storage.local.set({ savedData: list }, () => {
+      showToast(`Saved: ${data.time}`);
+    });
   });
 }

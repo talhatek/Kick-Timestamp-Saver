@@ -14,12 +14,51 @@
       color: #53fc18;
       margin-top: 5px;
     }
-    p.hint {
+    .autosave-box {
+      background-color: #2b2b2b;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
       text-align: center;
-      font-size: 11px;
-      color: #aaaaaa;
-      margin-bottom: 15px;
     }
+    .autosave-box label {
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .interval-box {
+      background-color: #2b2b2b;
+      padding: 8px 10px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #aaa;
+    }
+    .interval-box select {
+      background: #1b1b1b;
+      color: #53fc18;
+      border: 1px solid #444;
+      border-radius: 3px;
+      padding: 2px 6px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    #search-input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      background-color: #2b2b2b;
+      border: 1px solid #444;
+      border-radius: 4px;
+      color: #fff;
+      font-size: 13px;
+      box-sizing: border-box;
+    }
+    #search-input::placeholder { color: #777; }
     button#save-btn {
       width: 100%;
       padding: 10px;
@@ -29,7 +68,7 @@
       border-radius: 4px;
       font-weight: bold;
       cursor: pointer;
-      margin-bottom: 15px;
+      margin-bottom: 10px;
     }
     button#save-btn:hover { background-color: #45e012; }
     ul { list-style-type: none; padding: 0; margin: 0; }
@@ -61,15 +100,29 @@
 </head>
 <body>
   <h3>Kick Timestamps</h3>
-  <div style="background-color: #2b2b2b; padding: 10px; border-radius: 4px; margin-bottom: 15px; text-align: center;">
-    <label style="cursor: pointer; font-weight: bold; font-size: 14px;">
-      <input type="checkbox" id="autosave-toggle" style="cursor: pointer;"> 
-      Enable Auto-Save (Every 15s)
+
+  <div class="autosave-box">
+    <label>
+      <input type="checkbox" id="autosave-toggle" style="cursor: pointer;">
+      <span id="autosave-label">Enable Auto-Save</span>
     </label>
   </div>
+
+  <div class="interval-box">
+    <span>Save interval:</span>
+    <select id="interval-select">
+      <option value="5">5s</option>
+      <option value="15" selected>15s</option>
+      <option value="30">30s</option>
+      <option value="60">60s</option>
+    </select>
+  </div>
+
   <button id="save-btn">Save Current Time</button>
+  <input type="text" id="search-input" placeholder="Search timestamps...">
   <ul id="saved-list"></ul>
 
+  <script src="utils.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
