@@ -141,8 +141,5 @@ function performAutoSave() {
       list.push(data);
     }
 
-    chrome.storage.local.set({ savedData: list }, () => {
-      showToast(`Saved: ${data.time}`);
-    });
   });
 }
