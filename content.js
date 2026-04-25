@@ -122,6 +122,8 @@ function performAutoSave() {
     return;
   }
 
+  if (!document.title.includes('VOD')) return;
+
   const video = document.querySelector('video');
   if (!video || video.paused || video.currentTime === 0) return;
 
